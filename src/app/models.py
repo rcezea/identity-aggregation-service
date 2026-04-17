@@ -1,0 +1,24 @@
+from datetime import datetime, timezone
+from uuid import uuid7
+
+from database import Base
+from sqlalchemy import Column, String, Enum, Float, Integer, DateTime
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(String, primary_key=True, index=True, default=str(uuid7()))
+    name = Column(String, nullable=False, unique=True)
+    gender = Column(Enum('male', 'female'), nullable=False, default='male')
+    gender_probability = Column(Float, nullable=False)
+    sample_size = Column(Integer, nullable=False)
+    age = Column(Integer, nullable=False)
+    age_group = Column(String, nullable=False)
+    country_id = Column(String, nullable=False)
+    country_probability = Column(Float, nullable=False)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime
+        .now(timezone.utc)
+    )
