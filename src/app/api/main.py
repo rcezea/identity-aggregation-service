@@ -1,15 +1,27 @@
 # main.py
 import re
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, status, Request
+from fastapi import FastAPI, status, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import IntegrityError
 
-from src.app.services.data_processing import serialize
+from src.app.services.data_processing import serialize, serializer
 from src.app.services.external_apis import fetch_api, ExternalAPIError
 from src.app.services.data_validation import validate
 
-api = FastAPI()
+from src.app.database import get_db, Session, Base, engine
+from src.app.models import User
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield  # app runs here
+
+
+api = FastAPI(lifespan=lifespan)
 
 api.add_middleware(
     CORSMiddleware,
@@ -29,8 +41,8 @@ async def external_api_error_handler(request: Request, exc: ExternalAPIError):
     )
 
 
-@api.post("/api/profiles", status_code=status.HTTP_201_CREATED)
-async def get_profiles(body: dict):
+@api.post("/api/profiles")
+async def create_profile(body: dict, db: Session = Depends(get_db)):
     name: str = body.get("name")
 
     if not isinstance(name, str):
@@ -65,29 +77,118 @@ async def get_profiles(body: dict):
             }
         )
 
+    # Check if name exists in database
+    existing = db.query(User).filter(User.name == name).first()
+    if existing:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": "Profile already exists",
+                "data": serializer(existing)
+            }
+        )
+
+    # Asynchronous API calls
     data = await fetch_api(name=name)
 
-    # data validation
+    # Data Validation
     validate(*data)
 
-    # data processing
+    # Data Processing
     data = serialize(*data)
-    return data
+
+    # Save data in database
+    try:
+        user = User(**data)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        return JSONResponse(
+            status_code=201,
+            content={
+                "status": "success",
+                "data": serializer(user)
+            }
+        )
+    except IntegrityError:
+        db.rollback()
+        existing = db.query(User).filter(User.name == name).first()
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": "Profile already exists",
+                "data": serializer(existing)
+            }
+        )
 
 
 @api.get("/api/profiles/{id}", status_code=status.HTTP_200_OK)
-async def get_profile_by_id(id: int):
-    return {"message": f"Object {id} not found"}
+async def get_profile_by_id(id: str, db: Session = Depends(get_db)):
+    # Check if name exists in database
+    existing = db.query(User).filter(User.id == id).first()
+    if existing:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "data": serializer(existing)
+            }
+        )
+    return JSONResponse(
+        status_code=404,
+        content={
+            "status": "error",
+            "message": "Profile not found"
+        })
 
 
 @api.get("/api/profiles", status_code=status.HTTP_200_OK)
-async def get_profiles():
-    pass
+async def list_profiles(db: Session = Depends(get_db)):
+    data = db.query(User).all()
+    if not data:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Profile not found"
+            }
+        )
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "count": len(data),
+            "data": [
+                {
+                    "id": user.id,
+                    "name": user.name,
+                    "gender": user.gender,
+                    "age": user.age,
+                    "age_group": user.age_group,
+                    "country_id": user.country_id,
+                }
+                for user in data
+            ]
+        }
+    )
 
 
 @api.delete("/api/profiles/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_profile(id: int):
-    return None
+async def delete_profile(id: str, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.id == id).first()
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return {}
+    return JSONResponse(
+        status_code=404,
+        content={
+            "status": "error",
+            "message": "Profile not found"
+        })
 
 
 if "__main__" == __name__:
