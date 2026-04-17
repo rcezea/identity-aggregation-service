@@ -1,10 +1,13 @@
 # main.py
 import re
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.app.services.data_processing import serialize
 from src.app.services.external_apis import fetch_api, ExternalAPIError
+from src.app.services.data_validation import validate
 
 api = FastAPI()
 
@@ -13,6 +16,17 @@ api.add_middleware(
     allow_origins=["*"],
     allow_methods=["GET", "POST", "DELETE"],
 )
+
+
+@api.exception_handler(ExternalAPIError)
+async def external_api_error_handler(request: Request, exc: ExternalAPIError):
+    return JSONResponse(
+        status_code=502,
+        content={
+            "status": "error",
+            "message": f"{exc.api_name} returned an invalid response"
+        }
+    )
 
 
 @api.post("/api/profiles", status_code=status.HTTP_201_CREATED)
@@ -51,25 +65,18 @@ async def get_profiles(body: dict):
             }
         )
 
-    try:
-        genderize, agify, nationalize, error = await fetch_api(name=name)
-    except ExternalAPIError as e:
-        return JSONResponse(
-            status_code=502,
-            content={
-                "status": "error",
-                "message": "External API request failed"
-            })
+    data = await fetch_api(name=name)
 
     # data validation
+    validate(*data)
 
     # data processing
-
-    return {"message": f"Hello {name}"}
+    data = serialize(*data)
+    return data
 
 
 @api.get("/api/profiles/{id}", status_code=status.HTTP_200_OK)
-async def get_profile(id: int):
+async def get_profile_by_id(id: int):
     return {"message": f"Object {id} not found"}
 
 
