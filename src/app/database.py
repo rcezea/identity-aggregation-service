@@ -41,7 +41,7 @@ It is a factory that creates new session instances (one per request/operation).
 Each session represents a conversation with the database
 and must be closed after use.
 """
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
