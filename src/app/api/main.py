@@ -4,6 +4,7 @@ import re
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from src.app.services.external_apis import fetch_api, ExternalAPIError
 
 api = FastAPI()
 
@@ -49,6 +50,20 @@ async def get_profiles(body: dict):
                     "Invalid type"
             }
         )
+
+    try:
+        genderize, agify, nationalize, error = await fetch_api(name=name)
+    except ExternalAPIError as e:
+        return JSONResponse(
+            status_code=502,
+            content={
+                "status": "error",
+                "message": "External API request failed"
+            })
+
+    # data validation
+
+    # data processing
 
     return {"message": f"Hello {name}"}
 
