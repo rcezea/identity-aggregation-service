@@ -7,7 +7,8 @@ from sqlalchemy import Column, String, Enum, Float, Integer, DateTime, event
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(String, primary_key=True, index=True, default=str(uuid7()))
+    id = Column(String, primary_key=True, index=True,
+                default=lambda: str(uuid7()))
     name = Column(String, nullable=False, unique=True)
     gender = Column(Enum('male', 'female'), nullable=False, default='male')
     gender_probability = Column(Float, nullable=False)
@@ -19,7 +20,7 @@ class User(Base):
     created_at = Column(
         DateTime,
         nullable=False,
-        default=datetime
+        default=lambda: datetime
         .now(timezone.utc)
     )
 
