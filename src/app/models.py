@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import uuid7
 
 from database import Base
-from sqlalchemy import Column, String, Enum, Float, Integer, DateTime
+from sqlalchemy import Column, String, Enum, Float, Integer, DateTime, event
 
 
 class User(Base):
@@ -22,3 +22,15 @@ class User(Base):
         default=datetime
         .now(timezone.utc)
     )
+
+
+@event.listens_for(User, 'before_insert')
+def set_age_group(mapper, connection, target):
+    if target.age <= 12:
+        target.age_group = "child"
+    elif target.age <= 19:
+        target.age_group = "teenager"
+    elif target.age < 60:
+        target.age_group = "adult"
+    else:
+        target.age_group = "senior"
