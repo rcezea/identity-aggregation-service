@@ -7,7 +7,7 @@ import asyncio
 
 class ExternalAPIError(Exception):
     def __init__(self, api_name: str) -> None:
-        self.api_name = api_name
+        self.api_name = api_name.capitalize()
         super().__init__(api_name)
 
 
