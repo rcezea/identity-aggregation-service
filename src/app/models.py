@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid7
 
-from database import Base
+from src.app.database import Base
 from sqlalchemy import Column, String, Enum, Float, Integer, DateTime, event
 
 
@@ -10,7 +10,7 @@ class User(Base):
     id = Column(String, primary_key=True, index=True,
                 default=lambda: str(uuid7()))
     name = Column(String, nullable=False, unique=True)
-    gender = Column(Enum('male', 'female'), nullable=False, default='male')
+    gender = Column(Enum('male', 'female', name='gender_enum'), nullable=False, default='male')
     gender_probability = Column(Float, nullable=False)
     sample_size = Column(Integer, nullable=False)
     age = Column(Integer, nullable=False)
@@ -22,6 +22,7 @@ class User(Base):
         nullable=False,
         default=lambda: datetime
         .now(timezone.utc)
+        .replace(microsecond=0)
     )
 
 
