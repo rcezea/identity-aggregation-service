@@ -209,7 +209,6 @@ def search_profiles(
         db: Session = Depends(get_db),
 ):
     parsed = parse_or_error(q)
-    print(parsed)
 
     if parsed.get("status") == "error":
         return parsed

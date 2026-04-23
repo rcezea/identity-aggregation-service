@@ -25,7 +25,6 @@ def get_queries(params, model) -> list[Any]:
 
 
 def apply_sort(query, model, sort: str | None, order: str | None = "asc"):
-    print(sort, order)
 
     if not sort:
         return query
