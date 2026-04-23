@@ -1,12 +1,17 @@
 # main.py
 import re
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, status, Request, Depends
+from fastapi import FastAPI, status, Request, Depends, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import IntegrityError
 
+from app.services.query_parser import parse_or_error
+from app.services.query_processing import (get_queries,
+                                           apply_sort,
+                                           apply_pagination)
 from src.app.services.data_processing import serialize, serializer
 from src.app.services.external_apis import fetch_api, ExternalAPIError
 from src.app.services.data_validation import validate
@@ -125,7 +130,7 @@ async def create_profile(body: dict, db: Session = Depends(get_db)):
         )
 
 
-@api.get("/api/profiles/{id}", status_code=status.HTTP_200_OK)
+# @api.get("/api/profiles/{id}", status_code=status.HTTP_200_OK)
 async def get_profile_by_id(id: str, db: Session = Depends(get_db)):
     # Check if name exists in database
     existing = db.query(User).filter(User.id == id).first()
@@ -146,9 +151,25 @@ async def get_profile_by_id(id: str, db: Session = Depends(get_db)):
 
 
 @api.get("/api/profiles", status_code=status.HTTP_200_OK)
-async def list_profiles(db: Session = Depends(get_db)):
-    data = db.query(User).all()
-    if not data:
+async def list_profiles(
+        request: Request,
+        db: Session = Depends(get_db),
+        sort_by: str = None,
+        order: str = None,
+        page: int = 1,
+        limit: int = 10
+):
+    # Advanced Filtering & Sorting
+    params = request.query_params
+    conditions = get_queries(params, User)
+
+    query = db.query(User).filter(*conditions)
+    query = apply_sort(query, User, sort_by, order)
+    query = apply_pagination(query, page=page, limit=limit)
+
+    results = query.all()
+
+    if not results:
         return JSONResponse(
             status_code=404,
             content={
@@ -160,7 +181,9 @@ async def list_profiles(db: Session = Depends(get_db)):
         status_code=200,
         content={
             "status": "success",
-            "count": len(data),
+            "page": page,
+            "limit": limit if limit < 50 else 50,
+            "total": len(results),
             "data": [
                 {
                     "id": user.id,
@@ -170,7 +193,61 @@ async def list_profiles(db: Session = Depends(get_db)):
                     "age_group": user.age_group,
                     "country_id": user.country_id,
                 }
-                for user in data
+                for user in results
+            ]
+        }
+    )
+
+
+@api.get("/api/profiles/search")
+def search_profiles(
+        q: str,
+        sort_by: str = None,
+        order: str = None,
+        page: int = Query(1, ge=1),
+        limit: int = Query(20, le=100),
+        db: Session = Depends(get_db),
+):
+    parsed = parse_or_error(q)
+    print(parsed)
+
+    if parsed.get("status") == "error":
+        return parsed
+
+    filters = parsed["filters"]
+
+    conditions = get_queries(filters, User)
+    query = db.query(User).filter(*conditions)
+    query = apply_sort(query, User, sort_by, order)
+    query = apply_pagination(query, page, limit)
+
+    results = query.all()
+
+    if not results:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Profile not found"
+            }
+        )
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "page": page,
+            "limit": limit if limit < 50 else 50,
+            "total": len(results),
+            "data": [
+                {
+                    "id": user.id,
+                    "name": user.name,
+                    "gender": user.gender,
+                    "age": user.age,
+                    "age_group": user.age_group,
+                    "country_id": user.country_id,
+                }
+                for user in results
             ]
         }
     )
@@ -191,7 +268,7 @@ async def delete_profile(id: str, db: Session = Depends(get_db)):
         })
 
 
-if "__main__" == __name__:
+if __name__ == '__main__':
     import uvicorn
 
     uvicorn.run("main:api", host="127.0.0.1", port=8000, reload=True)

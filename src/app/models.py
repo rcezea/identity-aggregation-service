@@ -10,12 +10,15 @@ class User(Base):
     id = Column(String, primary_key=True, index=True,
                 default=lambda: str(uuid7()))
     name = Column(String, nullable=False, unique=True)
-    gender = Column(Enum('male', 'female', name='gender_enum'), nullable=False, default='male')
+    gender = Column(
+        Enum('male', 'female', name='gender_enum'),
+        nullable=False, default='male'
+    )
     gender_probability = Column(Float, nullable=False)
-    sample_size = Column(Integer, nullable=False)
     age = Column(Integer, nullable=False)
     age_group = Column(String, nullable=False)
     country_id = Column(String, nullable=False)
+    country_name = Column(String, nullable=False)
     country_probability = Column(Float, nullable=False)
     created_at = Column(
         DateTime,
