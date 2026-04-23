@@ -12,9 +12,11 @@ ALLOWED = {
     "max_gender_probability": lambda m, v: m.gender_probability <= v,
 }
 
+CONTROL_PARAMS = {"sort_by", "order", "page", "limit"}
 
 def get_queries(params, model) -> JSONResponse | list[Any]:
     invalid_keys = set(params.keys()) - set(ALLOWED.keys())
+    invalid_keys = invalid_keys - set(CONTROL_PARAMS)
     if invalid_keys:
         return JSONResponse(
             status_code=422,
