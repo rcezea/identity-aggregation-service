@@ -15,9 +15,9 @@ def serialize(genderize, agify, nationalize) -> dict:
         "name": genderize.get("name"),
         "gender": genderize.get("gender"),
         "gender_probability": genderize.get("probability"),
-        "sample_size": genderize.get("count"),
         "age": agify.get("age"),
         "country_id": country.get("country_id"),
+        "country_name": country.get("country_name"),
         "country_probability": country.get("probability"),
     }
 
@@ -35,10 +35,10 @@ def serializer(data) -> dict:
         "name": data.name,
         "gender": data.gender,
         "gender_probability": data.gender_probability,
-        "sample_size": data.sample_size,
         "age": data.age,
         "age_group": data.age_group,
         "country_id": data.country_id,
+        "country_name": data.country_name,
         "country_probability": data.country_probability,
         "created_at": data.created_at.isoformat() + "Z",
     }
