@@ -55,6 +55,12 @@ def parse_query(q: str) -> dict:
 
 
 def parse_or_error(q: str):
+    if not q or not q.strip():
+        return {
+            "status": "error",
+            "message": "Missing or empty parameter"
+        }
+
     filters = parse_query(q)
 
     if not filters:

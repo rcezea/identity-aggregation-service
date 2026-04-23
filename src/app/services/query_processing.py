@@ -1,6 +1,6 @@
 from typing import Any
 from sqlalchemy import asc, desc
-
+from starlette.responses import JSONResponse
 
 ALLOWED = {
     "gender": lambda m, v: m.gender == v,
@@ -13,7 +13,16 @@ ALLOWED = {
 }
 
 
-def get_queries(params, model) -> list[Any]:
+def get_queries(params, model) -> JSONResponse | list[Any]:
+    invalid_keys = set(params.keys()) - set(ALLOWED.keys())
+    if invalid_keys:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "status": "error",
+                "message": "Invalid query parameters"
+            }
+        )
     conditions = []
 
     for key, value in params.items():
@@ -31,21 +40,12 @@ def apply_sort(query, model, sort: str | None, order: str | None = "asc"):
 
     column = getattr(model, sort, None)
     if column is None:
-        return {
-            "status": "error",
-            "message": "Invalid query parameters"
-        }
+        return query
 
     if order == "desc":
-        return {
-            "status": "ok",
-            "query": query.order_by(desc(column))
-        }
+        return query.order_by(desc(column))
 
-    return {
-        "status": "ok",
-        "query": query.order_by(asc(column))
-    }
+    return query.order_by(asc(column))
 
 
 def apply_pagination(query, page: int = 1, limit: int = 10):
@@ -58,15 +58,3 @@ def apply_pagination(query, page: int = 1, limit: int = 10):
 
     offset = (page - 1) * limit
     return query.offset(offset).limit(limit)
-
-
-def parse_or_error(q: str):
-    filters = parse_query(q)
-
-    if not filters:
-        return {
-            "status": "error",
-            "message": "Unable to interpret query"
-        }
-
-    return {"status": "ok", "filters": filters}

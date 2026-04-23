@@ -160,13 +160,20 @@ async def list_profiles(
     # Advanced Filtering & Sorting
     params = request.query_params
     conditions = get_queries(params, User)
+    if isinstance(conditions, JSONResponse):
+        return conditions
+
+    if not conditions:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Missing or empty parameter"
+            }
+        )
 
     query = db.query(User).filter(*conditions)
-    sort = apply_sort(query, User, sort_by, order)
-    if sort.get("status") == "error":
-        return sort
-
-    query = sort["query"]
+    query = apply_sort(query, User, sort_by, order)
     query = apply_pagination(query, page=page, limit=limit)
 
     results = query.all()
@@ -218,12 +225,21 @@ def search_profiles(
     filters = parsed["filters"]
 
     conditions = get_queries(filters, User)
-    query = db.query(User).filter(*conditions)
-    sort = apply_sort(query, User, sort_by, order)
-    if sort.get("status") == "error":
-        return sort
 
-    query = sort["query"]
+    if isinstance(conditions, JSONResponse):
+        return conditions
+
+    if not conditions:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Missing or empty parameter"
+            }
+        )
+
+    query = db.query(User).filter(*conditions)
+    query = apply_sort(query, User, sort_by, order)
     query = apply_pagination(query, page, limit)
 
     results = query.all()
