@@ -118,14 +118,15 @@ async def create_profile(body: dict, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         existing = db.query(User).filter(User.name == name).first()
-        return JSONResponse(
-            status_code=200,
-            content={
-                "status": "success",
-                "message": "Profile already exists",
-                "data": serializer(existing)
-            }
-        )
+        if existing:
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": "success",
+                    "message": "Profile already exists",
+                    "data": serializer(existing)
+                }
+            )
 
 
 # @api.get("/api/profiles/{id}", status_code=status.HTTP_200_OK)
