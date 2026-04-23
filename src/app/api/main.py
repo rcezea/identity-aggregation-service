@@ -163,15 +163,6 @@ async def list_profiles(
     if isinstance(conditions, JSONResponse):
         return conditions
 
-    if not conditions:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status": "error",
-                "message": "Missing or empty parameter"
-            }
-        )
-
     query = db.query(User).filter(*conditions)
     query = apply_sort(query, User, sort_by, order)
     query = apply_pagination(query, page=page, limit=limit)
