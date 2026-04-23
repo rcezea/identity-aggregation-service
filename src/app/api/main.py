@@ -162,7 +162,11 @@ async def list_profiles(
     conditions = get_queries(params, User)
 
     query = db.query(User).filter(*conditions)
-    query = apply_sort(query, User, sort_by, order)
+    sort = apply_sort(query, User, sort_by, order)
+    if sort.get("status") == "error":
+        return sort
+
+    query = sort["query"]
     query = apply_pagination(query, page=page, limit=limit)
 
     results = query.all()
@@ -215,7 +219,11 @@ def search_profiles(
 
     conditions = get_queries(filters, User)
     query = db.query(User).filter(*conditions)
-    query = apply_sort(query, User, sort_by, order)
+    sort = apply_sort(query, User, sort_by, order)
+    if sort.get("status") == "error":
+        return sort
+
+    query = sort["query"]
     query = apply_pagination(query, page, limit)
 
     results = query.all()

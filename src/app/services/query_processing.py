@@ -31,12 +31,21 @@ def apply_sort(query, model, sort: str | None, order: str | None = "asc"):
 
     column = getattr(model, sort, None)
     if column is None:
-        return query
+        return {
+            "status": "error",
+            "message": "Invalid query parameters"
+        }
 
     if order == "desc":
-        return query.order_by(desc(column))
+        return {
+            "status": "ok",
+            "query": query.order_by(desc(column))
+        }
 
-    return query.order_by(asc(column))
+    return {
+        "status": "ok",
+        "query": query.order_by(asc(column))
+    }
 
 
 def apply_pagination(query, page: int = 1, limit: int = 10):
@@ -49,3 +58,15 @@ def apply_pagination(query, page: int = 1, limit: int = 10):
 
     offset = (page - 1) * limit
     return query.offset(offset).limit(limit)
+
+
+def parse_or_error(q: str):
+    filters = parse_query(q)
+
+    if not filters:
+        return {
+            "status": "error",
+            "message": "Unable to interpret query"
+        }
+
+    return {"status": "ok", "filters": filters}
