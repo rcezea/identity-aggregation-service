@@ -164,8 +164,13 @@ async def list_profiles(
     if isinstance(conditions, JSONResponse):
         return conditions
 
+
     query = db.query(User).filter(*conditions)
+    total = query.count()
+
     query = apply_sort(query, User, sort_by, order)
+    if isinstance(query, JSONResponse):
+        return query
     query = apply_pagination(query, page=page, limit=limit)
 
     results = query.all()
@@ -184,16 +189,9 @@ async def list_profiles(
             "status": "success",
             "page": page,
             "limit": limit if limit < 50 else 50,
-            "total": len(results),
+            "total": total,
             "data": [
-                {
-                    "id": user.id,
-                    "name": user.name,
-                    "gender": user.gender,
-                    "age": user.age,
-                    "age_group": user.age_group,
-                    "country_id": user.country_id,
-                }
+                serializer(user)
                 for user in results
             ]
         }
@@ -231,7 +229,10 @@ def search_profiles(
         )
 
     query = db.query(User).filter(*conditions)
+    total = query.count()
     query = apply_sort(query, User, sort_by, order)
+    if isinstance(query, JSONResponse):
+        return query
     query = apply_pagination(query, page, limit)
 
     results = query.all()
@@ -250,16 +251,9 @@ def search_profiles(
             "status": "success",
             "page": page,
             "limit": limit if limit < 50 else 50,
-            "total": len(results),
+            "total": total,
             "data": [
-                {
-                    "id": user.id,
-                    "name": user.name,
-                    "gender": user.gender,
-                    "age": user.age,
-                    "age_group": user.age_group,
-                    "country_id": user.country_id,
-                }
+                serializer(user)
                 for user in results
             ]
         }

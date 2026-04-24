@@ -17,7 +17,7 @@ def serialize(genderize, agify, nationalize) -> dict:
         "gender_probability": genderize.get("probability"),
         "age": agify.get("age"),
         "country_id": country.get("country_id"),
-        "country_name": country.get("country_name"),
+        "country_name": country.get("country_name", ""),
         "country_probability": country.get("probability"),
     }
 

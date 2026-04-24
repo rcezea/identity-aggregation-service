@@ -35,19 +35,41 @@ def get_queries(params, model) -> JSONResponse | list[Any]:
     return conditions
 
 
-def apply_sort(query, model, sort: str | None, order: str | None = "asc"):
+def apply_sort(query, model, sort: str | None = "created_at", order: str | None = "asc"):
 
-    if not sort:
-        return query
+    valid_sort_fields = {
+        "age": model.age,
+        "created_at": model.created_at,
+        "gender_probability": model.gender_probability,
+    }
 
-    column = getattr(model, sort, None)
-    if column is None:
-        return query
+    if sort not in valid_sort_fields:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Invalid query parameters"
+            }
+        )
 
-    if order == "desc":
-        return query.order_by(desc(column))
+    if order not in ["asc", "desc"]:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Invalid query parameters"
+            }
+        )
 
-    return query.order_by(asc(column))
+    # if not sort:
+    #     return query
+
+    column = valid_sort_fields.get(sort)
+
+    query = query.order_by(
+        column.asc() if order == "asc" else column.desc()
+    )
+    return query
 
 
 def apply_pagination(query, page: int = 1, limit: int = 10):
