@@ -153,8 +153,8 @@ async def get_profile_by_id(id: str, db: Session = Depends(get_db)):
 async def list_profiles(
         request: Request,
         db: Session = Depends(get_db),
-        sort_by: str = None,
-        order: str = None,
+        sort_by: str = "created_at",
+        order: str = "asc",
         page: int = 1,
         limit: int = 10
 ):
@@ -201,10 +201,8 @@ async def list_profiles(
 @api.get("/api/profiles/search")
 def search_profiles(
         q: str,
-        sort_by: str = None,
-        order: str = None,
-        page: int = Query(1, ge=1),
-        limit: int = Query(20, le=100),
+        page: int = 1,
+        limit: int = 10,
         db: Session = Depends(get_db),
 ):
     parsed = parse_or_error(q)
@@ -230,7 +228,6 @@ def search_profiles(
 
     query = db.query(User).filter(*conditions)
     total = query.count()
-    query = apply_sort(query, User, sort_by, order)
     if isinstance(query, JSONResponse):
         return query
     query = apply_pagination(query, page, limit)
